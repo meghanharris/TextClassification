@@ -1,0 +1,200 @@
+import pandas as pd
+import numpy as np
+
+data= pd.read_excel("/Users/meghanharris/Desktop/Assignment 3.xlsx")
+
+#1 Building a train dataset and test dataset
+rest_train= data[:400,1]
+rest_test= data[400:500,"id"]
+movie_train= data[500:900,"review"]
+movie_test= data[900:,"id"]
+train_= list(rest_train.append(movie_train,ignore_index=False))
+test_= list(rest_test.append(movie_test,ignore_index=False))
+train=train_["review"]
+train_y=train_["label"]
+test=test_["review"]
+test_y=test_["label"]
+
+#print(train.shape)
+#print(test.shape)
+
+#2 Transforming reviews into TFIDF matrix, lemmatizing, removing stop words, setting minimal document frequency and including bi-gram
+import nltk
+#tokenize train
+train_token=[]
+for i in train:
+    train_tokenized_reviews=nltk.word_tokenize(i.lower())
+    train_token.append(train_tokenized_reviews)
+#print(train_token)
+
+#tokenize test
+test_token=[]
+for i in test:
+    test_tokenized_reviews=nltk.word_tokenize(i.lower())
+    test_token.append(test_tokenized_reviews)
+#print(test_token)
+
+#review stopwords in train
+train_stop_words_removed=[]
+stop_words= nltk.corpus.stopwords.words("english")
+for sentence in train_token:
+    temp2=[]
+    for word in sentence:
+        if word not in stop_words and word.isalpha():
+            temp2.append(word)
+    train_stop_words_removed.append(temp2)
+#print(train_stop_words_removed)
+
+#review stopwords in test
+test_stop_words_removed=[]
+for sentence in test_token:
+    temp3=[]
+    for word in sentence:
+        if word not in stop_words and word.isalpha():
+            temp3.append(word)
+    test_stop_words_removed.append(temp3)
+#print(test_stop_words_removed)
+
+#lemmatize train
+lemmatizer=nltk.stem.WordNetLemmatizer()
+train_lemmatized=[]
+for sentence in train_stop_words_removed:
+    temp4=[]
+    for word in sentence:
+        temp4.append(lemmatizer.lemmatize(word))
+        if word == "quot":
+            temp4.remove(word)
+    train_lemmatized.append(temp4)
+#print(train_lemmatized)
+
+#lemmatize test
+test_lemmatized=[]
+for sentence in test_stop_words_removed:
+    temp5=[]
+    for word in sentence:
+        temp5.append(lemmatizer.lemmatize(word))
+        if word == "quot":
+            temp5.remove(word)
+    test_lemmatized.append(temp5)
+#print(test_lemmatized)
+
+#convert train and test into TFIDF
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+def tk(doc):
+    return doc
+
+vec=TfidfVectorizer(analyzer="word",tokenizer=tk,preprocessor=tk,token_pattern=None,min_df=5,ngram_range=(1,2))
+vec.fit(train_lemmatized)
+training_x= vec.transform(train_lemmatized)
+testing_x=vec.transform(test_lemmatized)
+
+#print(testing_x)
+#print(training_x)
+
+#3 training a Naive Bayes model, Random Forest model, SVM model, and simple ANN model 
+
+#Naive Bayes Model
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import accuracy_score
+#NBmodel= MultinomialNB()
+#NBmodel.fit(training_x, train_y)
+#y_pred_NB= NBmodel.predict(testing_x)
+#acc_NB= accuracy_score(test_y,y_pred_NB)
+#print("Naive Bayes model accuracy: "
+      #"{:.2f}%".format(acc_NB*100))
+#Naive Bayes model accuracy: 98.50%
+
+#Logit model
+from sklearn.linear_model import LogisticRegression
+#Logitmodel= LogisticRegression()
+#Logitmodel.fit(training_x,train_y)
+#y_pred_logit=Logitmodel.predict(testing_x)
+#acc_logit=accuracy_score(test_y,y_pred_logit)
+#print("Logit model accuracy: {:.2f}%".format(acc_logit*100))
+#Logit model accuracy: 99.00%
+
+#Random Forest Model
+from sklearn.ensemble import RandomForestClassifier
+#RFmodel= RandomForestClassifier(n_estimators=50, bootstrap=True, random_state=0)
+#RFmodel.fit(training_x,train_y)
+#y_pred_RF= RFmodel.predict(testing_x)
+#acc_RF= accuracy_score(test_y,y_pred_RF)
+#print("Random Forest model accuracy: {:.2f}%".format(acc_RF*100))
+#Random Forest model accuracy: 95.50%
+
+#SVM model
+from sklearn.svm import LinearSVC
+from sklearn.metrics import accuracy_score
+#SVMmodel= LinearSVC()
+#SVMmodel.fit(training_x,train_y)
+#y_pred_SVM= SVMmodel.predict(testing_x)
+#acc_SVM= accuracy_score(test_y,y_pred_SVM)
+#print("SVM model accuracy:"
+      #"{:.2f}%".format(acc_SVM*100))
+#SVM model accuracy: 99.00%
+
+#ANN model
+from sklearn.neural_network import MLPClassifier
+#DLmodel= MLPClassifier(solver="lbfgs",hidden_layer_sizes=4,random_state=1)
+#DLmodel.fit(training_x, train_y)
+#y_pred_DL= DLmodel.predict(testing_x)
+#acc_DL= accuracy_score(test_y,y_pred_DL)
+#print("DL model accuracy: {:.2f}%".format(acc_DL*100))
+#DL model accuracy score: 98.00%
+
+#4 Representing each document using index-encoding with padding
+#4
+from keras.preprocessing import sequence
+from keras.models import Sequential
+from keras.layers import Dense, Embedding, Flatten
+from  keras.layers import LSTM
+from collections import Counter
+docs= train_.append(test_)
+docs_x= [i for i in docs["review"]]
+docs_c= [i for i in docs["label"]]
+
+#defining vocab
+words= [j for i in docs_x for j in i]
+count_words= Counter(words)
+total_words=len(words)
+sorted_words=count_words.most_common(total_words)
+vocab_to_int={w: i+1 for i, (w,c) in enumerate(sorted_words)}
+
+#one-hot
+text_int=[]
+for i in docs_x:
+    r= [vocab_to_int[w] for w in i]
+    text_int.append(r)
+
+#dummy label
+encoded_labels= [1 if label == "movie" else 0 for label in docs_c]
+y_train=np.array(encoded_labels[:400] + encoded_labels[500:900])
+y_test= np.array(encoded_labels[400:500] + encoded_labels[900:])
+x_train=np.array(text_int[:400] + text_int[500:900])
+x_test=np.array(text_int[400:500] + text_int[900:])
+
+max_features=total_words
+maxlen=100
+batch_size=100
+
+x_train= sequence.pad_sequences(x_train,maxlen=maxlen)
+x_test=sequence.pad_sequences(x_test,maxlen=maxlen)
+
+print(x_train.shape)
+print(x_test.shape)
+
+
+#5 Training a deep learning model 
+import tensorflow.keras as keras
+from keras.models import Sequential
+from keras.layers import Dropout
+model=Sequential()
+model.add(Embedding(max_features,20,input_length=maxlen))
+model.add(LSTM(40,dropout=0.20,recurrent_dropout=0.20))
+model.add(Dropout(0.1))
+model.add(Dense(1))
+#model.compile(loss="categorical_crossentropy", optimizer="adadelta",metrics=["accuracy"])
+#model.fit(x_train,encoded_train, batch_size=batch_size, epochs=10)
+#performance= model.evaluate(x_test,encoded_test)
+#print("Test accuracy:",performance[1])
